@@ -6,12 +6,12 @@ from ops.model import ActiveStatus, MaintenanceStatus
 from ops.testing import Harness
 from pytest_mock import MockerFixture
 
-from charm import UpdateDBCharm
+from charm import UpgradeDBCharm
 
 
 @pytest.fixture
 def harness(mocker: MockerFixture):
-    update_db_harness = Harness(UpdateDBCharm)
+    update_db_harness = Harness(UpgradeDBCharm)
     update_db_harness.begin()
     yield update_db_harness
     update_db_harness.cleanup()
@@ -36,7 +36,7 @@ def test_config_changed_cannot_connect(mocker: MockerFixture, harness: Harness):
     container_mock = mocker.Mock()
     container_mock.can_connect.return_value = False
     mocker.patch(
-        "charm.UpdateDBCharm.container",
+        "charm.UpgradeDBCharm.container",
         return_value=container_mock,
         new_callable=mocker.PropertyMock,
     )
@@ -48,10 +48,12 @@ def test_config_changed_cannot_connect(mocker: MockerFixture, harness: Harness):
 def test_restart_service_service_not_exists(mocker: MockerFixture, harness: Harness):
     container_mock = mocker.Mock()
     mocker.patch(
-        "charm.UpdateDBCharm.container",
+        "charm.UpgradeDBCharm.container",
         return_value=container_mock,
         new_callable=mocker.PropertyMock,
     )
-    mocker.patch("charm.UpdateDBCharm.services", return_value={}, new_callable=mocker.PropertyMock)
+    mocker.patch(
+        "charm.UpgradeDBCharm.services", return_value={}, new_callable=mocker.PropertyMock
+    )
     harness.charm._restart_service()
     container_mock.restart.assert_not_called()

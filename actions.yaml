@@ -4,7 +4,8 @@
 get-valid-paths:
   description: Prints the valid update paths in the tool
 update-db:
-  description: Updates the Mongodb and MySQL with the new data needed for the target OSM
+  description: |
+    Updates the Mongodb and MySQL with the new data needed for the target OSM
   params:
     current-version:
       type: integer

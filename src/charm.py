@@ -6,20 +6,18 @@
 
 import logging
 
-from mongoUpgrade import MongoUpgrade
-from mysqlUpgrade import MysqlUpgrade
 from ops.charm import CharmBase, ConfigChangedEvent, WorkloadEvent
 from ops.framework import StoredState
 from ops.main import main
 from ops.model import ActiveStatus, MaintenanceStatus
-from pymongo import MongoClient
+
+from mongoUpgrade import MongoUpgrade
+from mysqlUpgrade import MysqlUpgrade
 
 logger = logging.getLogger(__name__)
 
 REQUIRED_CONFIG = ()
-VALID_PATHS = (
-    "9_10",
-    )
+VALID_PATHS = ("9_10",)
 
 
 class UpgradeDBCharm(CharmBase):
@@ -67,22 +65,21 @@ class UpgradeDBCharm(CharmBase):
 
     def _on_update_db_action(self, event):
         """Handle the update-db action."""
-        
         current_version = event.params["current-version"]
         target_version = event.params["target-version"]
         try:
             if event.params.get("mysql-only") and self.mysql:
-                logger.debug(f"Upgrade MySQL only")
+                logger.debug("Upgrade MySQL only")
                 self.mysql.upgrade(current_version, target_version, "MySQL")
             elif event.params.get("mongo-only") and self.mongo:
-                logger.debug(f"Upgrade Mongo only")
+                logger.debug("Upgrade Mongo only")
                 self.mongo.upgrade(current_version, target_version, "MongoDB")
             elif self.mysql and self.mongo:
                 self.mysql.upgrade(current_version, target_version, "MySQL")
                 self.mongo.upgrade(current_version, target_version, "MongoDB")
             else:
-                raise Exception(f"Mongo and/or Mysql URI not configured")
-            event.set_results({"output": f"DBs Upgraded"})
+                raise Exception("Mongo and/or Mysql URI not configured")
+            event.set_results({"output": "DBs Upgraded"})
         except Exception as e:
             event.fail(f"Failed DB Upgrade: {e}")
 
