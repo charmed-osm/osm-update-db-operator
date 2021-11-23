@@ -16,7 +16,7 @@ update-db:
     mysql-only:
       type: boolean
       description: "if True the update is only applied for mysql database"
-    mongo-only:
+    mongodb-only:
       type: boolean
       description: "if True the update is only applied for mongo database"
   required:
