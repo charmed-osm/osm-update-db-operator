@@ -1,0 +1,18 @@
+# Copyright 2021 David Garcia
+# See LICENSE file for licensing details.
+
+options:
+  log_level:
+    description: "Log Level"
+    type: string
+    default: "INFO"
+  mongodb_uri:
+    type: string
+    description: |
+      MongoDB URI (external database)
+      mongodb://<mongo_host>:<mongo_port>/
+  mysql_uri:
+    type: string
+    description: |
+      Mysql URI with the following format:
+        mysql://<user>:<password>@<mysql_host>:<mysql_port>/<database>

@@ -1,0 +1,20 @@
+# Copyright 2021 Canonical Ltd.
+# See LICENSE file for licensing details.
+
+name: update-db
+display-name: osm-update-db
+description: |
+  Charm to update the OSM databases
+
+summary: |
+  Charm to update the OSM databases
+
+containers:
+  update-db:
+    resource: update-db-image
+
+resources:
+  update-db-image:
+    type: oci-image
+    description: OCI image for Update DB
+    upstream-source: ubuntu:latest

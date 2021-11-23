@@ -1,0 +1,23 @@
+# Copyright 2021 Canonical Ltd.
+# See LICENSE file for licensing details.
+
+get-valid-paths:
+  description: Prints the valid update paths in the tool
+update-db:
+  description: Updates the Mongodb and MySQL with the new data needed for the target OSM
+  params:
+    current-version:
+      type: integer
+      description: "Current version of Charmed OSM - Example: 9"
+    target-version:
+      type: integer
+      description: "Final version of OSM after the update - Example: 10"
+    mysql-only:
+      type: boolean
+      description: "if True the update is only applied for mysql database"
+    mongo-only:
+      type: boolean
+      description: "if True the update is only applied for mongo database"
+  required:
+    - current-version
+    - target-version
