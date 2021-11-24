@@ -42,7 +42,7 @@ class MongoUpgrade:
 
     def _validate_upgrade(self, current, target):
         """Check if the upgrade path chosen is possible."""
-        logger.info(f"Validating the upgrade path")
+        logger.info("Validating the upgrade path")
         if current not in MONGODB_UPGRADE_FUNCTIONS:
             raise Exception(f"cannot upgrade from {current} version.")
         if target not in MONGODB_UPGRADE_FUNCTIONS[current]:
@@ -63,7 +63,7 @@ class MysqlUpgrade:
 
     def _validate_upgrade(self, current, target):
         """Check if the upgrade path chosen is possible."""
-        logger.info(f"Validating the upgrade path")
+        logger.info("Validating the upgrade path")
         if current not in MYSQL_UPGRADE_FUNCTIONS:
             raise Exception(f"cannot upgrade from {current} version.")
         if target not in MYSQL_UPGRADE_FUNCTIONS[current]:

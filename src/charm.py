@@ -24,8 +24,8 @@ class UpgradeDBCharm(CharmBase):
     def __init__(self, *args):
         super().__init__(*args)
 
-        mongo_uri = self.config.get("mongodb_uri")
-        mysql_uri = self.config.get("mysql_uri")
+        mongo_uri = self.config.get("mongodb-uri")
+        mysql_uri = self.config.get("mysql-uri")
         self.mongo = MongoUpgrade(mongo_uri) if mongo_uri else None
         self.mysql = MysqlUpgrade(mysql_uri) if mysql_uri else None
 

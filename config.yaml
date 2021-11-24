@@ -2,16 +2,16 @@
 # See LICENSE file for licensing details.
 
 options:
-  log_level:
+  log-level:
     description: "Log Level"
     type: string
     default: "INFO"
-  mongodb_uri:
+  mongodb-uri:
     type: string
     description: |
       MongoDB URI (external database)
       mongodb://<mongo_host>:<mongo_port>/
-  mysql_uri:
+  mysql-uri:
     type: string
     description: |
       Mysql URI with the following format:
