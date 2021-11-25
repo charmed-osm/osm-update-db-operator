@@ -4,10 +4,6 @@ See LICENSE file for licensing details. -->
 # OSM Update DB Operator
 
 [![code style](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black/tree/main)
-[![Run-Tests](https://github.com/gcalvinos/update-db-operator/actions/workflows/ci.yaml/badge.svg)](https://github.com/gcalvinos/update-db-operatpr/actions/workflows/ci.yaml)
-
-
-[![Update DB](https://charmhub.io/update-db/badge.svg)](https://charmhub.io/update-db)
 
 ## Description
 
@@ -36,8 +32,8 @@ juju deploy ./osm-update-db_ubuntu-20.04-amd64.charm
 Set MongoDB and MySQL URIs:
 
 ```shell
-juju config update-db mysql_uri=<mysql_uri>
-juju config update-db mongodb_uri=<mongodb_uri>
+juju config osm-update-db mysql-uri=<mysql_uri>
+juju config osm-update-db mongodb-uri=<mongodb_uri>
 ```
 
 ### Updating the databases
