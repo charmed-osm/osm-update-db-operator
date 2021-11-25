@@ -2,9 +2,11 @@
 # See LICENSE file for licensing details.
 
 name: osm-update-db
-display-name: OSM Update DB Operator
 description: |
   Charm to update the OSM databases
-
 summary: |
   Charm to update the OSM databases
+series:
+  - kubernetes
+deployment:
+  mode: operator

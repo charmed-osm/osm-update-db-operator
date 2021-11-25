@@ -30,7 +30,7 @@ class UpgradeDBCharm(CharmBase):
         self.mysql = MysqlUpgrade(mysql_uri) if mysql_uri else None
 
         if not self.mongo and not self.mysql:
-            self.unit.status = BlockedStatus("mongodb_uri and/or mysql_uri must be set")
+            self.unit.status = BlockedStatus("mongodb-uri and/or mysql-uri must be set")
             return
 
         # Observe events
@@ -44,8 +44,8 @@ class UpgradeDBCharm(CharmBase):
 
     def _on_update_db_action(self, event):
         """Handle the update-db action."""
-        current_version = event.params["current-version"]
-        target_version = event.params["target-version"]
+        current_version = str(event.params["current-version"])
+        target_version = str(event.params["target-version"])
         mysql_only = event.params.get("mysql-only")
         mongodb_only = event.params.get("mongodb-only")
 
