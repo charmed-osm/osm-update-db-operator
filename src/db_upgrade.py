@@ -37,7 +37,7 @@ class MongoUpgrade:
     def upgrade(self, current, target):
         """Validates the upgrading path and upgrades the DB."""
         self._validate_upgrade(current, target)
-        for function in MONGODB_UPGRADE_FUNCTIONS[current][target]:
+        for function in MONGODB_UPGRADE_FUNCTIONS.get(current)[target]:
             function(self.mongo_uri)
 
     def _validate_upgrade(self, current, target):
