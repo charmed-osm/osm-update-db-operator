@@ -23,7 +23,6 @@ class TestCharm(unittest.TestCase):
 
     def test_config_changed(self):
         self.harness.update_config({"mongodb-uri": "foo"})
-        print(self.harness.model.config)
         self.assertEqual(self.harness.model.unit.status, ActiveStatus())
 
     def test_config_changed_blocked(self):
