@@ -81,6 +81,8 @@ class UpgradeDBCharm(CharmBase):
         logger.debug("Upgrading mysql")
         if self.mysql:
             self.mysql.upgrade(current_version, target_version)
+        else:
+            raise Exception("mysql-uri not set")
 
     def _upgrade_mongodb(self, current_version, target_version):
         logger.debug("Upgrading mongodb")
