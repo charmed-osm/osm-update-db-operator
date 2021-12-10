@@ -88,6 +88,8 @@ class UpgradeDBCharm(CharmBase):
         logger.debug("Upgrading mongodb")
         if self.mongo:
             self.mongo.upgrade(current_version, target_version)
+        else:
+            raise Exception("mongo-uri not set")
 
 
 if __name__ == "__main__":  # pragma: no cover
