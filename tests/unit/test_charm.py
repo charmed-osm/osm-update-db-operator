@@ -59,7 +59,7 @@ class TestCharm(unittest.TestCase):
             }
         )
         self.harness.charm._on_update_db_action(action_event)
-        self.assertEqual(mock_mysql_upgrade.call_count, 2)
+        self.assertEqual(mock_mysql_upgrade().upgrade.call_count, 1)
 
     @patch("charm.MongoUpgrade")
     def test_update_db_fail_mongo(self, mock_mongo_upgrade):
@@ -73,7 +73,7 @@ class TestCharm(unittest.TestCase):
             }
         )
         self.harness.charm._on_update_db_action(action_event)
-        self.assertEqual(mock_mongo_upgrade.call_count, 2)
+        self.assertEqual(mock_mongo_upgrade().upgrade.call_count, 1)
 
     @patch("charm.MongoUpgrade")
     def test_update_db_not_configured_mongo(self, mock_mongo_upgrade):
@@ -115,5 +115,5 @@ class TestCharm(unittest.TestCase):
             }
         )
         self.harness.charm._on_update_db_action(action_event)
-        self.assertEqual(mock_mysql_upgrade.call_count, 2)
-        self.assertEqual(mock_mongo_upgrade.call_count, 2)
+        self.assertEqual(mock_mysql_upgrade().upgrade.call_count, 1)
+        self.assertEqual(mock_mongo_upgrade().upgrade.call_count, 1)
