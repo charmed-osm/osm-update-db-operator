@@ -27,7 +27,6 @@ class TestCharm(unittest.TestCase):
 
     def test_config_changed_blocked(self):
         self.harness.update_config({"log-level": "DEBUG"})
-        print(self.harness.model.config)
         self.assertEqual(
             self.harness.model.unit.status,
             BlockedStatus("mongodb-uri and/or mysql-uri must be set"),
