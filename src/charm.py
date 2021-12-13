@@ -24,22 +24,32 @@ class UpgradeDBCharm(CharmBase):
     def __init__(self, *args):
         super().__init__(*args)
 
-        mongo_uri = self.config.get("mongodb-uri")
-        mysql_uri = self.config.get("mysql-uri")
-        self.mongo = MongoUpgrade(mongo_uri) if mongo_uri else None
-        self.mysql = MysqlUpgrade(mysql_uri) if mysql_uri else None
-
-        if not self.mongo and not self.mysql:
-            self.unit.status = BlockedStatus("mongodb-uri and/or mysql-uri must be set")
-            return
-
         # Observe events
         event_observe_mapping = {
             self.on.update_db_action: self._on_update_db_action,
-            self.on.get_valid_paths_action: self._on_get_valid_paths_action,
+            self.on.config_changed: self._on_config_changed,
         }
         for event, observer in event_observe_mapping.items():
             self.framework.observe(event, observer)
+
+    @property
+    def mongo(self):
+        """Create MongoUpgrade object if the configuration has been set."""
+        mongo_uri = self.config.get("mongodb-uri")
+        return MongoUpgrade(mongo_uri) if mongo_uri else None
+
+    @property
+    def mysql(self):
+        """Create MysqlUpgrade object if the configuration has been set."""
+        mysql_uri = self.config.get("mysql-uri")
+        return MysqlUpgrade(mysql_uri) if mysql_uri else None
+
+    def _on_config_changed(self, _):
+        mongo_uri = self.config.get("mongodb-uri")
+        mysql_uri = self.config.get("mysql-uri")
+        if not mongo_uri and not mysql_uri:
+            self.unit.status = BlockedStatus("mongodb-uri and/or mysql-uri must be set")
+            return
         self.unit.status = ActiveStatus()
 
     def _on_update_db_action(self, event):
@@ -48,7 +58,6 @@ class UpgradeDBCharm(CharmBase):
         target_version = str(event.params["target-version"])
         mysql_only = event.params.get("mysql-only")
         mongodb_only = event.params.get("mongodb-only")
-
         try:
             results = {}
             if mysql_only and mongodb_only:
@@ -68,16 +77,19 @@ class UpgradeDBCharm(CharmBase):
         except Exception as e:
             event.fail(f"Failed DB Upgrade: {e}")
 
-    def _on_get_valid_paths_action(self, event):
-        pass
-
     def _upgrade_mysql(self, current_version, target_version):
         logger.debug("Upgrading mysql")
-        self.mysql.upgrade(current_version, target_version)
+        if self.mysql:
+            self.mysql.upgrade(current_version, target_version)
+        else:
+            raise Exception("mysql-uri not set")
 
     def _upgrade_mongodb(self, current_version, target_version):
         logger.debug("Upgrading mongodb")
-        self.mongo.upgrade(current_version, target_version)
+        if self.mongo:
+            self.mongo.upgrade(current_version, target_version)
+        else:
+            raise Exception("mongo-uri not set")
 
 
 if __name__ == "__main__":  # pragma: no cover
