@@ -4,6 +4,7 @@
 
 """Upgrade DB charm module."""
 
+import json
 import logging
 
 from pymongo import MongoClient
@@ -47,6 +48,71 @@ class MongoUpgrade:
             raise Exception(f"cannot upgrade from {current} version.")
         if target not in MONGODB_UPGRADE_FUNCTIONS[current]:
             raise Exception(f"cannot upgrade from version {current} to {target}.")
+
+    def _update_nslcmops_params(self):
+        """Updates the nslcmops collection to change the addtional params to a string."""
+        logger.info("Entering in _update_nslcmops_params function")
+        myclient = MongoClient(self.mongo_uri)
+        mydb = myclient["osm"]
+        collist = mydb.list_collection_names()
+
+        if "nslcmops" in collist:
+            mycol = mydb["nslcmops"]
+            for x in mycol.find():
+                if x.get("operationParams"):
+                    if x["operationParams"].get("additionalParamsForVnf") and isinstance(
+                        x["operationParams"].get("additionalParamsForVnf"), list
+                    ):
+                        string_param = json.dumps(x["operationParams"]["additionalParamsForVnf"])
+                        myquery = {"_id": x["_id"]}
+                        mycol.update_one(
+                            myquery,
+                            {
+                                "$set": {
+                                    "operationParams": {"additionalParamsForVnf": string_param}
+                                }
+                            },
+                        )
+                    elif x["operationParams"].get("primitive_params") and isinstance(
+                        x["operationParams"].get("primitive_params"), dict
+                    ):
+                        string_param = json.dumps(x["operationParams"]["primitive_params"])
+                        myquery = {"_id": x["_id"]}
+                        mycol.update_one(
+                            myquery,
+                            {"$set": {"operationParams": {"primitive_params": string_param}}},
+                        )
+
+    def _update_vnfrs_params(self):
+        """Updates the vnfrs collection to change the additional params to a string."""
+        logger.info("Entering in _update_vnfrs_params function")
+        myclient = MongoClient(self.mongo_uri)
+        mydb = myclient["osm"]
+        collist = mydb.list_collection_names()
+
+        if "vnfrs" in collist:
+            mycol = mydb["vnfrs"]
+            for vnfr in mycol.find():
+                if vnfr.get("kdur"):
+                    for kdur in vnfr["kdur"]:
+                        kdur_list = []
+                        if kdur.get("additionalParams") and not isinstance(
+                            kdur["additionalParams"], str
+                        ):
+                            kdur["additionalParams"] = json.dumps(kdur["additionalParams"])
+                        kdur_list.append(kdur)
+                    myquery = {"_id": vnfr["_id"]}
+                    mycol.update_one(
+                        myquery,
+                        {"$set": {"kdur": kdur_list}},
+                    )
+                    vnfr["kdur"] = kdur_list
+
+    def params_to_string(self):
+        """Updates de database to change the additional params to a string."""
+        logger.info("Entering in params_to_string function")
+        self._update_nslcmops_params()
+        self._update_vnfrs_params()
 
 
 class MysqlUpgrade:

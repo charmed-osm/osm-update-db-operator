@@ -27,6 +27,7 @@ class UpgradeDBCharm(CharmBase):
         # Observe events
         event_observe_mapping = {
             self.on.update_db_action: self._on_update_db_action,
+            self.on.string_params_action: self._on_string_params_action,
             self.on.config_changed: self._on_config_changed,
         }
         for event, observer in event_observe_mapping.items():
@@ -88,6 +89,13 @@ class UpgradeDBCharm(CharmBase):
         logger.debug("Upgrading mongodb")
         if self.mongo:
             self.mongo.upgrade(current_version, target_version)
+        else:
+            raise Exception("mongo-uri not set")
+
+    def _on_string_params_action(self, event):
+        logger.debug("Updating primitive and instantiation params")
+        if self.mongo:
+            self.mongo.params_to_string()
         else:
             raise Exception("mongo-uri not set")
 

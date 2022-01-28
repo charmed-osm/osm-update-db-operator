@@ -20,3 +20,7 @@ update-db:
   required:
     - current-version
     - target-version
+string-params:
+  description: |
+    Updates de database to change the instantiation and primitive params to a
+    string after the fix for bug1837
