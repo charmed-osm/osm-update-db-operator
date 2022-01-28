@@ -1,4 +1,4 @@
 # Copyright 2021 Canonical Ltd.
 # See LICENSE file for licensing details.
-ops
+ops >= 1.2.0
 pymongo
