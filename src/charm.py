@@ -27,6 +27,7 @@ class UpgradeDBCharm(CharmBase):
         # Observe events
         event_observe_mapping = {
             self.on.update_db_action: self._on_update_db_action,
+            self.on.apply_patch_action: self._on_apply_patch_action,
             self.on.config_changed: self._on_config_changed,
         }
         for event, observer in event_observe_mapping.items():
@@ -88,6 +89,14 @@ class UpgradeDBCharm(CharmBase):
         logger.debug("Upgrading mongodb")
         if self.mongo:
             self.mongo.upgrade(current_version, target_version)
+        else:
+            raise Exception("mongo-uri not set")
+
+    def _on_apply_patch_action(self, event):
+        bug_number = event.params["bug-number"]
+        logger.debug("Patching bug number {}".format(str(bug_number)))
+        if self.mongo:
+            self.mongo.apply_patch(bug_number)
         else:
             raise Exception("mongo-uri not set")
 

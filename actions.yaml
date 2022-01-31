@@ -20,3 +20,12 @@ update-db:
   required:
     - current-version
     - target-version
+apply-patch:
+  description: |
+    Updates de database to apply the changes needed to fix a bug
+  params:
+    bug-number:
+      type: integer
+      description: "The number of the bug that needs to be fixed"
+  required:
+    - bug-number
