@@ -67,8 +67,8 @@ def _update_vnfrs_params(mongo_uri):
         mycol = mydb["vnfrs"]
         for vnfr in mycol.find():
             if vnfr.get("kdur"):
+                kdur_list = []
                 for kdur in vnfr["kdur"]:
-                    kdur_list = []
                     if kdur.get("additionalParams") and not isinstance(
                         kdur["additionalParams"], str
                     ):
