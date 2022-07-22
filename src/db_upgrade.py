@@ -12,6 +12,53 @@ from pymongo import MongoClient
 logger = logging.getLogger(__name__)
 
 
+def _upgrade_mongo_10_12(mongo_uri):
+    logger.info("Entering in _update_mongo_10_12 function")
+    myclient = MongoClient(mongo_uri)
+    mydb = myclient["osm"]
+
+    def _update_nsr():
+        logger.info("Entering in _update_nsr function")
+        mycol = mydb["nsrs"]
+        for nsr in mycol.find():
+            logger.debug(f"Updating {nsr['_id']} nsr")
+            for key, values in nsr.items():
+                if isinstance(values, list):
+                    item_list = []
+                    for value in values:
+                        if isinstance(value, dict) and value.get("vim_info"):
+                            index = list(value["vim_info"].keys())[0]
+                            if not value["vim_info"][index].get("vim_message"):
+                                value["vim_info"][index]["vim_message"] = None
+                            item_list.append(value)
+                        myquery = {"_id": nsr["_id"]}
+                        mycol.update_one(myquery, {"$set": {key: item_list}})
+
+    def _update_vnfr():
+        logger.info("Entering in _update_vnfr function")
+        mycol = mydb["vnfrs"]
+        for vnfr in mycol.find():
+            logger.debug(f"Updating {vnfr['_id']} vnfr")
+            vdur_list = []
+            for vdur in vnfr["vdur"]:
+                if vdur.get("vim_info"):
+                    index = list(vdur["vim_info"].keys())[0]
+                    if not vdur["vim_info"][index].get("vim_message"):
+                        vdur["vim_info"][index]["vim_message"] = None
+                    if vdur["vim_info"][index].get(
+                        "interfaces", "Not found"
+                    ) != "Not found" and not vdur["vim_info"][index].get("interfaces_backup"):
+                        vdur["vim_info"][index]["interfaces_backup"] = vdur["vim_info"][index][
+                            "interfaces"
+                        ]
+                vdur_list.append(vdur)
+            myquery = {"_id": vnfr["_id"]}
+            mycol.update_one(myquery, {"$set": {"vdur": vdur_list}})
+
+    _update_nsr()
+    _update_vnfr()
+
+
 def _upgrade_mongo_9_10(mongo_uri):
     myclient = MongoClient(mongo_uri)
     mydb = myclient["osm"]
@@ -89,7 +136,10 @@ def _patch_1837(mongo_uri):
     _update_vnfrs_params(mongo_uri)
 
 
-MONGODB_UPGRADE_FUNCTIONS = {"9": {"10": [_upgrade_mongo_9_10]}}
+MONGODB_UPGRADE_FUNCTIONS = {
+    "9": {"10": [_upgrade_mongo_9_10]},
+    "10": {"12": [_upgrade_mongo_10_12]},
+}
 MYSQL_UPGRADE_FUNCTIONS = {}
 BUG_FIXES = {
     1837: _patch_1837,
