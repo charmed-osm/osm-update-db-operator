@@ -49,7 +49,7 @@ juju run-action osm-update-db/0 update-db current-version=9 target-version=10
 In case only you just want to update MongoDB, then we can use a flag 'mongodb-only=True':
 
 ```shell
-juju run-action osm-update-db/0 update-db current-version=9 target-version=10 mongo-only=True
+juju run-action osm-update-db/0 update-db current-version=9 target-version=10 mongodb-only=True
 ```
 
 In case only you just want to update MySQL database, then we can use a flag 'mysql-only=True':
