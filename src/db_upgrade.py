@@ -19,7 +19,9 @@ def _upgrade_mongo_10_12(mongo_uri):
 
     def _update_nsr():
         logger.info("Entering in _update_nsr function")
+        namespace = "kube-system:"
         mycol = mydb["nsrs"]
+
         for nsr in mycol.find():
             logger.debug(f"Updating {nsr['_id']} nsr")
             for key, values in nsr.items():
@@ -33,6 +35,14 @@ def _upgrade_mongo_10_12(mongo_uri):
                             item_list.append(value)
                         myquery = {"_id": nsr["_id"]}
                         mycol.update_one(myquery, {"$set": {key: item_list}})
+            if nsr["_admin"].get("deployed"):
+                k8s_list = []
+                for k8s in nsr["_admin"]["deployed"].get("K8s"):
+                    if k8s.get("k8scluster-uuid"):
+                        k8s["k8scluster-uuid"] = k8s["k8scluster-uuid"].replace(namespace, "", 1)
+                    k8s_list.append(k8s)
+                myquery = {"_id": nsr["_id"]}
+                mycol.update_one(myquery, {"$set": {"_admin.deployed.K8s": k8s_list}})
 
     def _update_vnfr():
         logger.info("Entering in _update_vnfr function")
@@ -55,8 +65,31 @@ def _upgrade_mongo_10_12(mongo_uri):
             myquery = {"_id": vnfr["_id"]}
             mycol.update_one(myquery, {"$set": {"vdur": vdur_list}})
 
+    def _update_k8scluster():
+        logger.info("Entering in _update_k8scluster function")
+        namespace = "kube-system:"
+        mycol = mydb["k8sclusters"]
+        for k8scluster in mycol.find():
+            if k8scluster["_admin"].get("helm-chart") and k8scluster["_admin"]["helm-chart"].get(
+                "id"
+            ):
+                if k8scluster["_admin"]["helm-chart"]["id"].startswith(namespace):
+                    k8scluster["_admin"]["helm-chart"]["id"] = k8scluster["_admin"]["helm-chart"][
+                        "id"
+                    ].replace(namespace, "", 1)
+            if k8scluster["_admin"].get("helm-chart-v3") and k8scluster["_admin"][
+                "helm-chart-v3"
+            ].get("id"):
+                if k8scluster["_admin"]["helm-chart-v3"]["id"].startswith(namespace):
+                    k8scluster["_admin"]["helm-chart-v3"]["id"] = k8scluster["_admin"][
+                        "helm-chart-v3"
+                    ]["id"].replace(namespace, "", 1)
+            myquery = {"_id": k8scluster["_id"]}
+            mycol.update_one(myquery, {"$set": k8scluster})
+
     _update_nsr()
     _update_vnfr()
+    _update_k8scluster()
 
 
 def _upgrade_mongo_9_10(mongo_uri):
