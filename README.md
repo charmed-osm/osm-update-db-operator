@@ -16,7 +16,7 @@ Charm used to update the OSM databases during an OSM upgrade process. To be used
 Clone the repository:
 
 ```shell
-git clone https://github.com/gcalvinos/db-upgrade-operator.git
+git clone git@github.com:charmed-osm/osm-update-db-operator.git
 cd db-upgrade-operator
 ```
 
