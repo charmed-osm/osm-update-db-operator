@@ -7,11 +7,11 @@ from unittest.mock import MagicMock, Mock, call, patch
 
 import db_upgrade
 from db_upgrade import (
+    MongoPatch1837,
     MongoUpgrade,
+    MongoUpgrade910,
+    MongoUpgrade1012,
     MysqlUpgrade,
-    _patch_1837,
-    _upgrade_mongo_9_10,
-    _upgrade_mongo_10_12,
 )
 
 logger = logging.getLogger(__name__)
@@ -27,7 +27,7 @@ class TestUpgradeMongo910(unittest.TestCase):
         mock_db.list_collection_names.return_value = collection_dict
         mock_db.__getitem__.side_effect = collection_dict.__getitem__
         mock_mongo_client.return_value = {"osm": mock_db}
-        _upgrade_mongo_9_10("mongo_uri")
+        MongoUpgrade910.upgrade("mongo_uri")
         alarms.update_one.assert_not_called()
 
     @patch("db_upgrade.MongoClient")
@@ -38,7 +38,7 @@ class TestUpgradeMongo910(unittest.TestCase):
         mock_db.list_collection_names.return_value = {"other": {}}
         mock_db.alarms.return_value = None
         mock_mongo_client.return_value = {"osm": mock_db}
-        self.assertIsNone(_upgrade_mongo_9_10("mongo_uri"))
+        self.assertIsNone(MongoUpgrade910.upgrade("mongo_uri"))
 
     @patch("db_upgrade.MongoClient")
     def test_upgrade_mongo_9_10_no_alarm_status(self, mock_mongo_client):
@@ -50,7 +50,7 @@ class TestUpgradeMongo910(unittest.TestCase):
         mock_db.__getitem__.side_effect = collection_dict.__getitem__
         mock_db.alarms.return_value = alarms
         mock_mongo_client.return_value = {"osm": mock_db}
-        _upgrade_mongo_9_10("mongo_uri")
+        MongoUpgrade910.upgrade("mongo_uri")
         alarms.update_one.assert_called_once_with({"_id": "1"}, {"$set": {"alarm_status": "ok"}})
 
 
@@ -68,7 +68,7 @@ class TestUpgradeMongo1012(unittest.TestCase):
         self.mock_db.__getitem__.side_effect = collection_list.__getitem__
         self.mock_db.list_collection_names.return_value = collection_list
         mock_mongo_client.return_value = {"osm": self.mock_db}
-        _upgrade_mongo_10_12("mongo_uri")
+        MongoUpgrade1012.upgrade("mongo_uri")
 
     @patch("db_upgrade.MongoClient")
     def test_update_nsr_empty_nsr(self, mock_mongo_client):
@@ -81,7 +81,7 @@ class TestUpgradeMongo1012(unittest.TestCase):
         self.mock_db.__getitem__.side_effect = collection_list.__getitem__
         self.mock_db.list_collection_names.return_value = collection_list
         mock_mongo_client.return_value = {"osm": self.mock_db}
-        _upgrade_mongo_10_12("mongo_uri")
+        MongoUpgrade1012.upgrade("mongo_uri")
 
     @patch("db_upgrade.MongoClient")
     def test_update_nsr_add_vim_message(self, mock_mongo_client):
@@ -97,7 +97,7 @@ class TestUpgradeMongo1012(unittest.TestCase):
         self.mock_db.__getitem__.side_effect = collection_list.__getitem__
         self.mock_db.list_collection_names.return_value = collection_list
         mock_mongo_client.return_value = {"osm": self.mock_db}
-        _upgrade_mongo_10_12("mongo_uri")
+        MongoUpgrade1012.upgrade("mongo_uri")
         expected_vim_info = {"vim_info_key1": {"vim_message": None}}
         expected_vim_info2 = {"vim_info_key2": {"vim_message": "Hello"}}
         self.assertEqual(vim_info1, expected_vim_info)
@@ -118,7 +118,7 @@ class TestUpgradeMongo1012(unittest.TestCase):
         self.mock_db.__getitem__.side_effect = collection_list.__getitem__
         self.mock_db.list_collection_names.return_value = collection_list
         mock_mongo_client.return_value = {"osm": self.mock_db}
-        _upgrade_mongo_10_12("mongo_uri")
+        MongoUpgrade1012.upgrade("mongo_uri")
         expected_k8s = [{"k8scluster-uuid": "namespace"}, {"k8scluster-uuid": "k8s"}]
         self.nsrs.update_one.assert_called_once_with(
             {"_id": "2"}, {"$set": {"_admin.deployed.K8s": expected_k8s}}
@@ -131,7 +131,7 @@ class TestUpgradeMongo1012(unittest.TestCase):
         self.mock_db.__getitem__.side_effect = collection_list.__getitem__
         self.mock_db.list_collection_names.return_value = collection_list
         mock_mongo_client.return_value = {"osm": self.mock_db}
-        _upgrade_mongo_10_12("mongo_uri")
+        MongoUpgrade1012.upgrade("mongo_uri")
         self.vnfrs.update_one.assert_called_once_with({"_id": "10"}, {"$set": {"vdur": []}})
 
     @patch("db_upgrade.MongoClient")
@@ -143,7 +143,7 @@ class TestUpgradeMongo1012(unittest.TestCase):
         self.mock_db.__getitem__.side_effect = collection_list.__getitem__
         self.mock_db.list_collection_names.return_value = collection_list
         mock_mongo_client.return_value = {"osm": self.mock_db}
-        _upgrade_mongo_10_12("mongo_uri")
+        MongoUpgrade1012.upgrade("mongo_uri")
         self.assertEqual(vdur, {"other": {}})
         self.vnfrs.update_one.assert_called_once_with({"_id": "10"}, {"$set": {"vdur": [vdur]}})
 
@@ -158,7 +158,7 @@ class TestUpgradeMongo1012(unittest.TestCase):
         self.mock_db.__getitem__.side_effect = collection_list.__getitem__
         self.mock_db.list_collection_names.return_value = collection_list
         mock_mongo_client.return_value = {"osm": self.mock_db}
-        _upgrade_mongo_10_12("mongo_uri")
+        MongoUpgrade1012.upgrade("mongo_uri")
         expected_vim_info = {"vim_message": "HelloWorld"}
         self.assertEqual(vim_info, expected_vim_info)
         self.vnfrs.update_one.assert_called_once_with({"_id": "10"}, {"$set": {"vdur": [vdur]}})
@@ -174,7 +174,7 @@ class TestUpgradeMongo1012(unittest.TestCase):
         self.mock_db.__getitem__.side_effect = collection_list.__getitem__
         self.mock_db.list_collection_names.return_value = collection_list
         mock_mongo_client.return_value = {"osm": self.mock_db}
-        _upgrade_mongo_10_12("mongo_uri")
+        MongoUpgrade1012.upgrade("mongo_uri")
         expected_vim_info = {"vim_message": None, "interfaces_backup": "HelloWorld"}
         self.assertEqual(vim_info, expected_vim_info)
         self.vnfrs.update_one.assert_called_once_with({"_id": "10"}, {"$set": {"vdur": [vdur]}})
@@ -190,7 +190,7 @@ class TestUpgradeMongo1012(unittest.TestCase):
         self.mock_db.__getitem__.side_effect = collection_list.__getitem__
         self.mock_db.list_collection_names.return_value = collection_list
         mock_mongo_client.return_value = {"osm": self.mock_db}
-        _upgrade_mongo_10_12("mongo_uri")
+        MongoUpgrade1012.upgrade("mongo_uri")
         expected_vim_info = {
             "interfaces": "HelloWorld",
             "vim_message": "ByeWorld",
@@ -206,7 +206,7 @@ class TestUpgradeMongo1012(unittest.TestCase):
         self.mock_db.__getitem__.side_effect = collection_list.__getitem__
         self.mock_db.list_collection_names.return_value = collection_list
         mock_mongo_client.return_value = {"osm": self.mock_db}
-        _upgrade_mongo_10_12("mongo_uri")
+        MongoUpgrade1012.upgrade("mongo_uri")
 
     @patch("db_upgrade.MongoClient")
     def test_update_k8scluster_replace_namespace_in_helm_chart(self, mock_mongo_client):
@@ -217,7 +217,7 @@ class TestUpgradeMongo1012(unittest.TestCase):
         self.mock_db.__getitem__.side_effect = collection_list.__getitem__
         self.mock_db.list_collection_names.return_value = collection_list
         mock_mongo_client.return_value = {"osm": self.mock_db}
-        _upgrade_mongo_10_12("mongo_uri")
+        MongoUpgrade1012.upgrade("mongo_uri")
         expected_helm_chart = {"id": "Hello", "other": {}}
         expected_k8s_cluster = {"_id": "8", "_admin": {"helm-chart": expected_helm_chart}}
         self.k8s_clusters.update_one.assert_called_once_with(
@@ -233,7 +233,7 @@ class TestUpgradeMongo1012(unittest.TestCase):
         self.mock_db.__getitem__.side_effect = collection_list.__getitem__
         self.mock_db.list_collection_names.return_value = collection_list
         mock_mongo_client.return_value = {"osm": self.mock_db}
-        _upgrade_mongo_10_12("mongo_uri")
+        MongoUpgrade1012.upgrade("mongo_uri")
         expected_helm_chart_v3 = {"id": "Hello", "other": {}}
         expected_k8s_cluster = {"_id": "8", "_admin": {"helm-chart-v3": expected_helm_chart_v3}}
         self.k8s_clusters.update_one.assert_called_once_with(
@@ -252,7 +252,7 @@ class TestPatch1837(unittest.TestCase):
         collection_dict = {"other": {}}
         self.mock_db.list_collection_names.return_value = collection_dict
         mock_mongo_client.return_value = {"osm": self.mock_db}
-        _patch_1837("mongo_uri")
+        MongoPatch1837.patch("mongo_uri")
 
     @patch("db_upgrade.MongoClient")
     def test_update_vnfrs_params_no_kdur(self, mock_mongo_client):
@@ -260,7 +260,7 @@ class TestPatch1837(unittest.TestCase):
         collection_dict = {"vnfrs": self.vnfrs, "other": {}}
         self.mock_db.list_collection_names.return_value = collection_dict
         mock_mongo_client.return_value = {"osm": self.mock_db}
-        _patch_1837("mongo_uri")
+        MongoPatch1837.patch("mongo_uri")
 
     @patch("db_upgrade.MongoClient")
     def test_update_vnfrs_params_kdur_without_additional_params(self, mock_mongo_client):
@@ -270,7 +270,7 @@ class TestPatch1837(unittest.TestCase):
         self.mock_db.list_collection_names.return_value = collection_dict
         self.mock_db.__getitem__.side_effect = collection_dict.__getitem__
         mock_mongo_client.return_value = {"osm": self.mock_db}
-        _patch_1837("mongo_uri")
+        MongoPatch1837.patch("mongo_uri")
         self.vnfrs.update_one.assert_called_once_with({"_id": "1"}, {"$set": {"kdur": kdur}})
 
     @patch("db_upgrade.MongoClient")
@@ -283,7 +283,7 @@ class TestPatch1837(unittest.TestCase):
         self.mock_db.list_collection_names.return_value = collection_dict
         self.mock_db.__getitem__.side_effect = collection_dict.__getitem__
         mock_mongo_client.return_value = {"osm": self.mock_db}
-        _patch_1837("mongo_uri")
+        MongoPatch1837.patch("mongo_uri")
         self.vnfrs.update_one.assert_called_once_with(
             {"_id": "1"}, {"$set": {"kdur": [kdur1, {"additionalParams": "4", "other": {}}]}}
         )
@@ -295,7 +295,7 @@ class TestPatch1837(unittest.TestCase):
         self.mock_db.list_collection_names.return_value = collection_dict
         self.mock_db.__getitem__.side_effect = collection_dict.__getitem__
         mock_mongo_client.return_value = {"osm": self.mock_db}
-        _patch_1837("mongo_uri")
+        MongoPatch1837.patch("mongo_uri")
 
     @patch("db_upgrade.MongoClient")
     def test_update_nslcmops_additional_params(self, mock_mongo_client):
@@ -309,7 +309,7 @@ class TestPatch1837(unittest.TestCase):
         self.mock_db.list_collection_names.return_value = collection_dict
         self.mock_db.__getitem__.side_effect = collection_dict.__getitem__
         mock_mongo_client.return_value = {"osm": self.mock_db}
-        _patch_1837("mongo_uri")
+        MongoPatch1837.patch("mongo_uri")
         call1 = call(
             {"_id": "2"}, {"$set": {"operationParams": {"additionalParamsForVnf": "[1, 2, 3]"}}}
         )
