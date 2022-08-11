@@ -95,10 +95,13 @@ class UpgradeDBCharm(CharmBase):
     def _on_apply_patch_action(self, event):
         bug_number = event.params["bug-number"]
         logger.debug("Patching bug number {}".format(str(bug_number)))
-        if self.mongo:
-            self.mongo.apply_patch(bug_number)
-        else:
-            raise Exception("mongo-uri not set")
+        try:
+            if self.mongo:
+                self.mongo.apply_patch(bug_number)
+            else:
+                raise Exception("mongo-uri not set")
+        except Exception as e:
+            event.fail(f"Failed Patch Application: {e}")
 
 
 if __name__ == "__main__":  # pragma: no cover
