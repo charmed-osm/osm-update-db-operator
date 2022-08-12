@@ -32,7 +32,7 @@ class TestCharm(unittest.TestCase):
             BlockedStatus("mongodb-uri and/or mysql-uri must be set"),
         )
 
-    def test_update_db_fail_only(self):
+    def test_update_db_fail_only_params(self):
         action_event = Mock(
             params={
                 "current-version": 9,
@@ -47,8 +47,9 @@ class TestCharm(unittest.TestCase):
             [("Failed DB Upgrade: cannot set both mysql-only and mongodb-only options to True",)],
         )
 
+    @patch("charm.MongoUpgrade")
     @patch("charm.MysqlUpgrade")
-    def test_update_db_mysql(self, mock_mysql_upgrade):
+    def test_update_db_mysql(self, mock_mysql_upgrade, mock_mongo_upgrade):
         self.harness.update_config({"mysql-uri": "foo"})
         action_event = Mock(
             params={
@@ -59,10 +60,12 @@ class TestCharm(unittest.TestCase):
             }
         )
         self.harness.charm._on_update_db_action(action_event)
-        self.assertEqual(mock_mysql_upgrade().upgrade.call_count, 1)
+        mock_mysql_upgrade().upgrade.assert_called_once()
+        mock_mongo_upgrade.assert_not_called()
 
     @patch("charm.MongoUpgrade")
-    def test_update_db_fail_mongo(self, mock_mongo_upgrade):
+    @patch("charm.MysqlUpgrade")
+    def test_update_db_mongo(self, mock_mysql_upgrade, mock_mongo_upgrade):
         self.harness.update_config({"mongodb-uri": "foo"})
         action_event = Mock(
             params={
@@ -73,10 +76,11 @@ class TestCharm(unittest.TestCase):
             }
         )
         self.harness.charm._on_update_db_action(action_event)
-        self.assertEqual(mock_mongo_upgrade().upgrade.call_count, 1)
+        mock_mongo_upgrade().upgrade.assert_called_once()
+        mock_mysql_upgrade.assert_not_called()
 
     @patch("charm.MongoUpgrade")
-    def test_update_db_not_configured_mongo(self, mock_mongo_upgrade):
+    def test_update_db_not_configured_mongo_fail(self, mock_mongo_upgrade):
         action_event = Mock(
             params={
                 "current-version": 7,
@@ -87,9 +91,13 @@ class TestCharm(unittest.TestCase):
         )
         self.harness.charm._on_update_db_action(action_event)
         mock_mongo_upgrade.assert_not_called()
+        self.assertEqual(
+            action_event.fail.call_args,
+            [("Failed DB Upgrade: mongo-uri not set",)],
+        )
 
     @patch("charm.MysqlUpgrade")
-    def test_update_db_not_configured_mysql(self, mock_mysql_upgrade):
+    def test_update_db_not_configured_mysql_fail(self, mock_mysql_upgrade):
         action_event = Mock(
             params={
                 "current-version": 7,
@@ -100,10 +108,14 @@ class TestCharm(unittest.TestCase):
         )
         self.harness.charm._on_update_db_action(action_event)
         mock_mysql_upgrade.assert_not_called()
+        self.assertEqual(
+            action_event.fail.call_args,
+            [("Failed DB Upgrade: mysql-uri not set",)],
+        )
 
     @patch("charm.MongoUpgrade")
     @patch("charm.MysqlUpgrade")
-    def test_update_db_fail(self, mock_mysql_upgrade, mock_mongo_upgrade):
+    def test_update_db_mongodb_and_mysql(self, mock_mysql_upgrade, mock_mongo_upgrade):
         self.harness.update_config({"mongodb-uri": "foo"})
         self.harness.update_config({"mysql-uri": "foo"})
         action_event = Mock(
@@ -115,5 +127,30 @@ class TestCharm(unittest.TestCase):
             }
         )
         self.harness.charm._on_update_db_action(action_event)
-        self.assertEqual(mock_mysql_upgrade().upgrade.call_count, 1)
-        self.assertEqual(mock_mongo_upgrade().upgrade.call_count, 1)
+        mock_mysql_upgrade().upgrade.assert_called_once()
+        mock_mongo_upgrade().upgrade.assert_called_once()
+
+    @patch("charm.MongoUpgrade")
+    def test_apply_patch(self, mock_mongo_upgrade):
+        self.harness.update_config({"mongodb-uri": "foo"})
+        action_event = Mock(
+            params={
+                "bug-number": 57,
+            }
+        )
+        self.harness.charm._on_apply_patch_action(action_event)
+        mock_mongo_upgrade().apply_patch.assert_called_once()
+
+    @patch("charm.MongoUpgrade")
+    def test_apply_patch_fail(self, mock_mongo_upgrade):
+        action_event = Mock(
+            params={
+                "bug-number": 57,
+            }
+        )
+        self.harness.charm._on_apply_patch_action(action_event)
+        mock_mongo_upgrade.assert_not_called()
+        self.assertEqual(
+            action_event.fail.call_args,
+            [("Failed Patch Application: mongo-uri not set",)],
+        )
