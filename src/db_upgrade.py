@@ -12,17 +12,34 @@ from pymongo import MongoClient
 logger = logging.getLogger(__name__)
 
 
-def _upgrade_mongo_10_12(mongo_uri):
-    logger.info("Entering in _update_mongo_10_12 function")
-    myclient = MongoClient(mongo_uri)
-    mydb = myclient["osm"]
+class MongoUpgrade1012:
+    """Upgrade MongoDB Database from OSM v10 to v12."""
 
-    def _update_nsr():
-        logger.info("Entering in _update_nsr function")
+    @staticmethod
+    def _remove_namespace_from_k8s(nsrs, nsr):
         namespace = "kube-system:"
-        mycol = mydb["nsrs"]
+        if nsr["_admin"].get("deployed"):
+            k8s_list = []
+            for k8s in nsr["_admin"]["deployed"].get("K8s"):
+                if k8s.get("k8scluster-uuid"):
+                    k8s["k8scluster-uuid"] = k8s["k8scluster-uuid"].replace(namespace, "", 1)
+                k8s_list.append(k8s)
+            myquery = {"_id": nsr["_id"]}
+            nsrs.update_one(myquery, {"$set": {"_admin.deployed.K8s": k8s_list}})
 
-        for nsr in mycol.find():
+    @staticmethod
+    def _update_nsr(osm_db):
+        """Update nsr.
+
+        Add vim_message = None if it does not exist.
+        Remove "namespace:" from k8scluster-uuid.
+        """
+        if "nsrs" not in osm_db.list_collection_names():
+            return
+        logger.info("Entering in MongoUpgrade1012._update_nsr function")
+
+        nsrs = osm_db["nsrs"]
+        for nsr in nsrs.find():
             logger.debug(f"Updating {nsr['_id']} nsr")
             for key, values in nsr.items():
                 if isinstance(values, list):
@@ -33,20 +50,21 @@ def _upgrade_mongo_10_12(mongo_uri):
                             if not value["vim_info"][index].get("vim_message"):
                                 value["vim_info"][index]["vim_message"] = None
                             item_list.append(value)
-                        myquery = {"_id": nsr["_id"]}
-                        mycol.update_one(myquery, {"$set": {key: item_list}})
-            if nsr["_admin"].get("deployed"):
-                k8s_list = []
-                for k8s in nsr["_admin"]["deployed"].get("K8s"):
-                    if k8s.get("k8scluster-uuid"):
-                        k8s["k8scluster-uuid"] = k8s["k8scluster-uuid"].replace(namespace, "", 1)
-                    k8s_list.append(k8s)
-                myquery = {"_id": nsr["_id"]}
-                mycol.update_one(myquery, {"$set": {"_admin.deployed.K8s": k8s_list}})
+                    myquery = {"_id": nsr["_id"]}
+                    nsrs.update_one(myquery, {"$set": {key: item_list}})
+            MongoUpgrade1012._remove_namespace_from_k8s(nsrs, nsr)
 
-    def _update_vnfr():
-        logger.info("Entering in _update_vnfr function")
-        mycol = mydb["vnfrs"]
+    @staticmethod
+    def _update_vnfr(osm_db):
+        """Update vnfr.
+
+        Add vim_message to vdur if it does not exist.
+        Copy content of interfaces into interfaces_backup.
+        """
+        if "vnfrs" not in osm_db.list_collection_names():
+            return
+        logger.info("Entering in MongoUpgrade1012._update_vnfr function")
+        mycol = osm_db["vnfrs"]
         for vnfr in mycol.find():
             logger.debug(f"Updating {vnfr['_id']} vnfr")
             vdur_list = []
@@ -65,11 +83,15 @@ def _upgrade_mongo_10_12(mongo_uri):
             myquery = {"_id": vnfr["_id"]}
             mycol.update_one(myquery, {"$set": {"vdur": vdur_list}})
 
-    def _update_k8scluster():
-        logger.info("Entering in _update_k8scluster function")
+    @staticmethod
+    def _update_k8scluster(osm_db):
+        """Remove namespace from helm-chart and helm-chart-v3 id."""
+        if "k8sclusters" not in osm_db.list_collection_names():
+            return
+        logger.info("Entering in MongoUpgrade1012._update_k8scluster function")
         namespace = "kube-system:"
-        mycol = mydb["k8sclusters"]
-        for k8scluster in mycol.find():
+        k8sclusters = osm_db["k8sclusters"]
+        for k8scluster in k8sclusters.find():
             if k8scluster["_admin"].get("helm-chart") and k8scluster["_admin"]["helm-chart"].get(
                 "id"
             ):
@@ -85,97 +107,112 @@ def _upgrade_mongo_10_12(mongo_uri):
                         "helm-chart-v3"
                     ]["id"].replace(namespace, "", 1)
             myquery = {"_id": k8scluster["_id"]}
-            mycol.update_one(myquery, {"$set": k8scluster})
+            k8sclusters.update_one(myquery, {"$set": k8scluster})
 
-    _update_nsr()
-    _update_vnfr()
-    _update_k8scluster()
-
-
-def _upgrade_mongo_9_10(mongo_uri):
-    myclient = MongoClient(mongo_uri)
-    mydb = myclient["osm"]
-    collist = mydb.list_collection_names()
-
-    if "alarms" in collist:
-        mycol = mydb["alarms"]
-        for x in mycol.find():
-            if not x.get("alarm_status"):
-                myquery = {"_id": x["_id"]}
-                mycol.update_one(myquery, {"$set": {"alarm_status": "ok"}})
+    @staticmethod
+    def upgrade(mongo_uri):
+        """Upgrade nsr, vnfr and k8scluster in DB."""
+        logger.info("Entering in MongoUpgrade1012.upgrade function")
+        myclient = MongoClient(mongo_uri)
+        osm_db = myclient["osm"]
+        MongoUpgrade1012._update_nsr(osm_db)
+        MongoUpgrade1012._update_vnfr(osm_db)
+        MongoUpgrade1012._update_k8scluster(osm_db)
 
 
-def _update_nslcmops_params(mongo_uri):
-    """Updates the nslcmops collection to change the addtional params to a string."""
-    logger.info("Entering in _update_nslcmops_params function")
-    myclient = MongoClient(mongo_uri)
-    mydb = myclient["osm"]
-    collist = mydb.list_collection_names()
+class MongoUpgrade910:
+    """Upgrade MongoDB Database from OSM v9 to v10."""
 
-    if "nslcmops" in collist:
-        mycol = mydb["nslcmops"]
-        for x in mycol.find():
-            if x.get("operationParams"):
-                if x["operationParams"].get("additionalParamsForVnf") and isinstance(
-                    x["operationParams"].get("additionalParamsForVnf"), list
-                ):
-                    string_param = json.dumps(x["operationParams"]["additionalParamsForVnf"])
+    @staticmethod
+    def upgrade(mongo_uri):
+        """Add parameter alarm status = OK if not found in alarms collection."""
+        myclient = MongoClient(mongo_uri)
+        osm_db = myclient["osm"]
+        collist = osm_db.list_collection_names()
+
+        if "alarms" in collist:
+            mycol = osm_db["alarms"]
+            for x in mycol.find():
+                if not x.get("alarm_status"):
                     myquery = {"_id": x["_id"]}
-                    mycol.update_one(
-                        myquery,
-                        {"$set": {"operationParams": {"additionalParamsForVnf": string_param}}},
-                    )
-                elif x["operationParams"].get("primitive_params") and isinstance(
-                    x["operationParams"].get("primitive_params"), dict
-                ):
-                    string_param = json.dumps(x["operationParams"]["primitive_params"])
-                    myquery = {"_id": x["_id"]}
-                    mycol.update_one(
-                        myquery,
-                        {"$set": {"operationParams": {"primitive_params": string_param}}},
-                    )
+                    mycol.update_one(myquery, {"$set": {"alarm_status": "ok"}})
 
 
-def _update_vnfrs_params(mongo_uri):
-    """Updates the vnfrs collection to change the additional params to a string."""
-    logger.info("Entering in _update_vnfrs_params function")
-    myclient = MongoClient(mongo_uri)
-    mydb = myclient["osm"]
-    collist = mydb.list_collection_names()
+class MongoPatch1837:
+    """Patch Bug 1837 on MongoDB."""
 
-    if "vnfrs" in collist:
-        mycol = mydb["vnfrs"]
-        for vnfr in mycol.find():
-            if vnfr.get("kdur"):
-                kdur_list = []
-                for kdur in vnfr["kdur"]:
-                    if kdur.get("additionalParams") and not isinstance(
-                        kdur["additionalParams"], str
+    @staticmethod
+    def _update_nslcmops_params(osm_db):
+        """Updates the nslcmops collection to change the additional params to a string."""
+        logger.info("Entering in MongoPatch1837._update_nslcmops_params function")
+        if "nslcmops" in osm_db.list_collection_names():
+            nslcmops = osm_db["nslcmops"]
+            for nslcmop in nslcmops.find():
+                if nslcmop.get("operationParams"):
+                    if nslcmop["operationParams"].get("additionalParamsForVnf") and isinstance(
+                        nslcmop["operationParams"].get("additionalParamsForVnf"), list
                     ):
-                        kdur["additionalParams"] = json.dumps(kdur["additionalParams"])
-                    kdur_list.append(kdur)
-                myquery = {"_id": vnfr["_id"]}
-                mycol.update_one(
-                    myquery,
-                    {"$set": {"kdur": kdur_list}},
-                )
-                vnfr["kdur"] = kdur_list
+                        string_param = json.dumps(
+                            nslcmop["operationParams"]["additionalParamsForVnf"]
+                        )
+                        myquery = {"_id": nslcmop["_id"]}
+                        nslcmops.update_one(
+                            myquery,
+                            {
+                                "$set": {
+                                    "operationParams": {"additionalParamsForVnf": string_param}
+                                }
+                            },
+                        )
+                    elif nslcmop["operationParams"].get("primitive_params") and isinstance(
+                        nslcmop["operationParams"].get("primitive_params"), dict
+                    ):
+                        string_param = json.dumps(nslcmop["operationParams"]["primitive_params"])
+                        myquery = {"_id": nslcmop["_id"]}
+                        nslcmops.update_one(
+                            myquery,
+                            {"$set": {"operationParams": {"primitive_params": string_param}}},
+                        )
 
+    @staticmethod
+    def _update_vnfrs_params(osm_db):
+        """Updates the vnfrs collection to change the additional params to a string."""
+        logger.info("Entering in MongoPatch1837._update_vnfrs_params function")
+        if "vnfrs" in osm_db.list_collection_names():
+            mycol = osm_db["vnfrs"]
+            for vnfr in mycol.find():
+                if vnfr.get("kdur"):
+                    kdur_list = []
+                    for kdur in vnfr["kdur"]:
+                        if kdur.get("additionalParams") and not isinstance(
+                            kdur["additionalParams"], str
+                        ):
+                            kdur["additionalParams"] = json.dumps(kdur["additionalParams"])
+                        kdur_list.append(kdur)
+                    myquery = {"_id": vnfr["_id"]}
+                    mycol.update_one(
+                        myquery,
+                        {"$set": {"kdur": kdur_list}},
+                    )
+                    vnfr["kdur"] = kdur_list
 
-def _patch_1837(mongo_uri):
-    """Updates de database to change the additional params from dict to a string."""
-    logger.info("Entering in _patch_1837 function")
-    _update_nslcmops_params(mongo_uri)
-    _update_vnfrs_params(mongo_uri)
+    @staticmethod
+    def patch(mongo_uri):
+        """Updates the database to change the additional params from dict to a string."""
+        logger.info("Entering in MongoPatch1837.patch function")
+        myclient = MongoClient(mongo_uri)
+        osm_db = myclient["osm"]
+        MongoPatch1837._update_nslcmops_params(osm_db)
+        MongoPatch1837._update_vnfrs_params(osm_db)
 
 
 MONGODB_UPGRADE_FUNCTIONS = {
-    "9": {"10": [_upgrade_mongo_9_10]},
-    "10": {"12": [_upgrade_mongo_10_12]},
+    "9": {"10": [MongoUpgrade910.upgrade]},
+    "10": {"12": [MongoUpgrade1012.upgrade]},
 }
 MYSQL_UPGRADE_FUNCTIONS = {}
 BUG_FIXES = {
-    1837: _patch_1837,
+    1837: MongoPatch1837.patch,
 }
 
 

@@ -17,14 +17,14 @@ Clone the repository:
 
 ```shell
 git clone git@github.com:charmed-osm/osm-update-db-operator.git
-cd db-upgrade-operator
+cd osm-update-db-operator
 ```
 
 Build and deploy the charm:
 
 ```shell
-sudo snap install charmcraft
-charmcraft build
+sudo snap install charmcraft --classic
+charmcraft pack
 juju add-model update-db
 juju deploy ./osm-update-db_ubuntu-20.04-amd64.charm
 ```
